@@ -303,6 +303,12 @@ int receiveLogMessage()
   
   // TODO test this shit
   bool ok = myRadio.read(&receivedMessage, sizeof(unsigned long));
+  digitalWrite(LED_BUILTIN, HIGH);
+  
+  Serial.println("Message Received: ");
+  Serial.println(receivedMessage);
+  
+  sendLogMessage(receivedMessage);
   
   return receivedMessage;
 }
@@ -318,8 +324,13 @@ void sendLogMessage(int messageId)
   //Check whether someone listened to the message
   bool ok = myRadio.write(&id, sizeof(unsigned long));
   if (ok) {
+    Serial.println("Message sent:");
+    Serial.println(messageId);
+    
     analogWrite(pwm_a, 0);
     analogWrite(pwm_b, 0);
+  }else{
+    Serial.println("Message send failed");
   }
   //Set the radio back to receive mode
   myRadio.startListening();
@@ -487,6 +498,9 @@ void loop()
   // Start following the line
   //followLine();
 
+  // temp
+   waitForInfo = true;
+   
   // check for an intersection
   if((sensor0 || sensor5 || (!sensor1 && !sensor2 && !sensor3 && !sensor4)) && moving)
   {
@@ -629,10 +643,10 @@ void loop()
       messageID = 200;
     }
   }
-  
+
   if(waitForInfo)
   {
-    
+    receiveLogMessage();
   }
   
 }

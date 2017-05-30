@@ -19,7 +19,7 @@ void setup()
   Serial.begin(9600);
 
   optimusRadio.begin();
-  optimusRadio.openReadingPipe(1, pipes[2]);
+  optimusRadio.openReadingPipe(1, pipes[0]);
   optimusRadio.stopListening();
   optimusRadio.startListening();
 
@@ -242,12 +242,7 @@ void listenApplication()
 void sendData(String message)
 {
   char robot = message[0];
-  String data = message;
-  
-  int kaa = data.toInt();
-
-  //Serial.println(bytes);
-  
+  char data = message[1];
   bool sent = false;
   switch(robot)
   {
@@ -258,16 +253,15 @@ void sendData(String message)
       optimusRadio.startListening();
       break;
     case '2':
-      Serial.println("Sending to bot 2:");
-      Serial.println(kaa);
+      Serial.println("422");
       bumblebeeRadio.stopListening();
       bumblebeeRadio.openWritingPipe(pipes[1]);
       sent = bumblebeeRadio.write(&data, sizeof(char));
       bumblebeeRadio.startListening();
       if(sent){
-        Serial.println("Sent message.");
+        Serial.println("421");
       }else{
-        Serial.println("Failed to send.");
+        Serial.println("420");
       }
       break;
     default:

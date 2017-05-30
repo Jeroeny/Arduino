@@ -178,7 +178,7 @@ namespace MazeDrawer
         private void DataReceived(string data)
         {
             char robot = data[0];
-
+            Console.WriteLine("DataReceived: " + data);
             switch(robot)
             {
                 case '1':
@@ -834,11 +834,11 @@ namespace MazeDrawer
             switch (robot.Name)
             {
                 case "Optimus":
-                    message = "1 " + data;
+                    message = "1" + data;
                     serialport.Write(message);
                     break;
                 case "Bumblebee":
-                    message = "2 " + data;
+                    message = "2" + data;
                     serialport.Write(message);
                     break;
             }
@@ -870,7 +870,7 @@ namespace MazeDrawer
         private void button1_Click(object sender, EventArgs e)
         {
             Console.WriteLine("Charge");
-            SendData("3", bumblebee);
+            SendData("35", bumblebee);
         }
     }
 }
