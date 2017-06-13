@@ -11,7 +11,7 @@ RF24 bumblebeeRadio (9, 10);
 
 const uint64_t pipes[4] = { 0xF0F0F0F0E1LL, 0xF0F0F0F0D2LL, 0xF0F0F0F0A1LL, 0xF0F0F0F0A2LL };
 
-bool test1 = false;
+bool test1 = true;
 bool test2 = false;
 
 void setup()
@@ -24,7 +24,7 @@ void setup()
   optimusRadio.startListening();
 
   bumblebeeRadio.begin();
-  bumblebeeRadio.openReadingPipe(3, pipes[1]);
+  bumblebeeRadio.openReadingPipe(3, pipes[3]);
   bumblebeeRadio.stopListening();
   bumblebeeRadio.startListening();
 
@@ -193,7 +193,7 @@ void listenOptimus()
   {
     unsigned long message;
     bool ok = optimusRadio.read(&message, sizeof(unsigned long));
-    Serial.println("425");
+    Serial.println("Received from optimus:");
     Serial.println(message);
     if (ok)
     {
@@ -213,7 +213,7 @@ void listenBumblebee()
   {
     unsigned long message;
     bool ok = bumblebeeRadio.read(&message, sizeof(unsigned long));
-    Serial.println("424");
+    Serial.println("Received from bumblebee:");
     Serial.println(message);
     //if (ok)
     //{
@@ -244,7 +244,7 @@ void sendData(String message)
   char robot = message[0];
   String data = message;
   
-  int kaa = data.toInt();
+  int msgi = data.toInt();
 
   //Serial.println(bytes);
   
@@ -252,17 +252,24 @@ void sendData(String message)
   switch(robot)
   {
     case '1':
+      Serial.println("Sending to optimus:");
+      Serial.println(msgi);
       optimusRadio.stopListening();
       optimusRadio.openWritingPipe(pipes[0]);
-      optimusRadio.write(&data, sizeof(char));
+      sent = optimusRadio.write(&msgi, sizeof(char));
       optimusRadio.startListening();
+      if(sent){
+        Serial.println("Sent message.");
+      }else{
+        Serial.println("Failed to send.");
+      }
       break;
     case '2':
-      Serial.println("Sending to bot 2:");
-      Serial.println(kaa);
+      Serial.println("Sending to bumblebee:");
+      Serial.println(msgi);
       bumblebeeRadio.stopListening();
       bumblebeeRadio.openWritingPipe(pipes[1]);
-      sent = bumblebeeRadio.write(&data, sizeof(char));
+      sent = bumblebeeRadio.write(&msgi, sizeof(char));
       bumblebeeRadio.startListening();
       if(sent){
         Serial.println("Sent message.");

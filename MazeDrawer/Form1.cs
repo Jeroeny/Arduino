@@ -7,6 +7,7 @@ using System.Windows.Forms;
 using MazeDrawer.HelperClasses;
 using System.Linq;
 
+
 /*
  * TODO list in no particular order
  * 
@@ -179,7 +180,11 @@ namespace MazeDrawer
         {
             char robot = data[0];
             Console.WriteLine("DataReceived: " + data);
-            switch(robot)
+
+            Int32 unixTimestamp = (Int32)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
+
+            Console.WriteLine("At: " + unixTimestamp);
+            switch (robot)
             {
                 case '1':
                     DoRobotyStuff(optimus, data);
@@ -799,17 +804,25 @@ namespace MazeDrawer
         {
             messagebox.Items.Clear();
             Astar astar = new Astar();
-            
+
             foreach (Autobot autobot in autobots)
             {
                 List<ArrayHelper> path = new List<ArrayHelper>();
                 ArrayHelper start = (ArrayHelper)mazeList.Where(t => t.DeltaX == autobot.X && t.DeltaY == autobot.Y).FirstOrDefault();
 
+                List<ArrayHelper> shortestPath = new List<ArrayHelper>();
+
                 foreach (ArrayHelper questionmark in questionmarks)
                 {
                     path = astar.FindPath(start, questionmark);
 
-                    foreach(ArrayHelper helper in mazeList.Where(h => h.State != ArrayHelper.HelperState.UNTESTED))
+                    if (path.Count < shortestPath.Count || shortestPath.Count == 0)
+                    {
+                        shortestPath = path;
+                        messagebox.Items.Add("New shortest path");
+                    }
+
+                    foreach (ArrayHelper helper in mazeList.Where(h => h.State != ArrayHelper.HelperState.UNTESTED))
                     {
                         helper.State = ArrayHelper.HelperState.UNTESTED;
                         helper.ParentArrayHelper = null;
@@ -821,6 +834,33 @@ namespace MazeDrawer
                         messagebox.Items.Add(helper.DeltaX + " " + helper.DeltaY);
                     }
                 }
+
+                Console.WriteLine("BOT: " + autobot.Name);
+                Console.WriteLine("POS: " + autobot.X + " " + autobot.Y);
+                Console.WriteLine("TO:  " + shortestPath[0].DeltaX + " " + shortestPath[0].DeltaY);
+                Console.WriteLine("DIR:  " + autobot.Orientation);
+
+                var dirX = shortestPath[0].DeltaX - autobot.X;
+                var dirY = shortestPath[0].DeltaY - autobot.Y;
+
+                Orientation newOrientation = new Orientation();
+                if(dirX > 0)
+                {
+                    newOrientation = Orientation.EAST;
+                }
+                else if(dirX < 0)
+                {
+                    newOrientation = Orientation.WEST;
+                }
+                else if(dirY > 0)
+                {
+                    newOrientation = Orientation.SOUTH;
+                }
+                else if (dirY < 0)
+                {
+                    newOrientation = Orientation.NORTH;
+                }
+                Console.WriteLine("NEW:  " + newOrientation);
             }
         }
 
@@ -870,7 +910,11 @@ namespace MazeDrawer
         private void button1_Click(object sender, EventArgs e)
         {
             Console.WriteLine("Charge");
-            SendData("35", bumblebee);
+            Int32 unixTimestamp = (Int32)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
+
+            Console.WriteLine("At: " + unixTimestamp);
+            SendData("3", bumblebee);
+            //SendData("35", optimus);
         }
     }
 }

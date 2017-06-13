@@ -62,6 +62,8 @@ int tiles[100][1][4]; // X-xoordinate, Y-coordinate, Tile type, Tile orientation
 int autobotOrientation = 0; // 0-NORTH, 1-EAST, 2-SOUTH, 3-WEST
 int tileOrientation = 0; // 0-NORTH, 1-EAST, 2-SOUTH, 3-WEST
 
+bool hasr = false;
+
 void setup() {
   Serial.begin(9600);
   printf_begin();
@@ -307,7 +309,7 @@ int receiveLogMessage()
   
   Serial.println("Message Received: ");
   Serial.println(receivedMessage);
-  
+ 
   sendLogMessage(receivedMessage);
   
   return receivedMessage;
@@ -491,15 +493,18 @@ void changeCoordinates(int turn)
   }
 }
 
+unsigned long lastMessage = 0;
+bool hasReceived = false;
+
 void loop() 
 {
   // Read sensor data
   readAllSensors();
   // Start following the line
-  //followLine();
+  followLine();
 
   // temp
-   waitForInfo = true;
+  //waitForInfo = false;
    
   // check for an intersection
   if((sensor0 || sensor5 || (!sensor1 && !sensor2 && !sensor3 && !sensor4)) && moving)
@@ -578,60 +583,78 @@ void loop()
       intersectionTimer = millis();
       // there is no intersection
     }
+    
     moving = true;
-    // determine the direction
-    if(messageID == 110 || messageID == 140 || messageID == 160 || messageID == 130)
-    {
-      messageID += 3;
-      sendLogMessage(messageID);
-      // turn left
-      changeAutobotOrientation(2);
-      changeCoordinates(2);
-      turn(0);
-    }
-    else if(messageID == 120 || (messageID == 100 && straightTile == true))
-    {
-      messageID += 0;
-      sendLogMessage(messageID);
-      changeCoordinates(0);
-      straight();
-      delay(140);
-    }
-    else if(messageID == 150)
-    {
-      messageID += 1;
-      sendLogMessage(messageID);
-      // turn right
-      changeAutobotOrientation(1);
-      changeCoordinates(1);
-      turn(1);
-    }
-    else if(messageID == 170)
-    {
-      messageID += 2;
-      sendLogMessage(messageID);
-      // turn around
-      changeAutobotOrientation(3);
-      changeCoordinates(3);
-      turn(1);
-    }
-
-    // save the intersection
-    if(arrayCounter <= 100)
-    {
-      tiles[arrayCounter][1][1] = x;
-      tiles[arrayCounter][1][2] = y;
-      tiles[arrayCounter][1][3] = tile;
-
-      sendLogMessage(tiles[arrayCounter][1][1]);
-      sendLogMessage(tiles[arrayCounter][1][2]);
-      sendLogMessage(tiles[arrayCounter][1][3]);
-
-      arrayCounter++;
-    }    
-    
 
     
+    // get Info
+    int msg = 99;
+    if(!hasReceived || millis() - lastMessage > 4000){
+      msg = receiveLogMessage();
+      lastMessage = millis();
+      hasReceived = true;
+    }
+    if(msg != 99){
+      doAction(msg);  
+    }else{
+    
+      // determine the direction
+      if(messageID == 210 || messageID == 240 || messageID == 260 || messageID == 230)
+      {
+        messageID += 3;
+        sendLogMessage(messageID);
+        
+        // turn left
+        changeAutobotOrientation(2);
+        changeCoordinates(2);
+        turn(0);
+      }
+      else if(messageID == 220 || (messageID == 200 && straightTile == true))
+      {
+        messageID += 0;
+        sendLogMessage(messageID);
+
+        // go straight
+        changeCoordinates(0);
+        straight();
+        delay(140);
+      }
+      else if(messageID == 250)
+      {
+        messageID += 1;
+        sendLogMessage(messageID);
+        
+        // turn right
+        changeAutobotOrientation(1);
+        changeCoordinates(1);
+        turn(1);
+      }
+      else if(messageID == 270)
+      {
+        messageID += 2;
+        sendLogMessage(messageID);
+        
+        // turn around
+        changeAutobotOrientation(3);
+        changeCoordinates(3);
+        turn(1);
+      }
+  
+      // save the intersection
+      if(arrayCounter <= 200)
+      {
+        tiles[arrayCounter][1][1] = x;
+        tiles[arrayCounter][1][2] = y;
+        tiles[arrayCounter][1][3] = tile;
+  
+        sendLogMessage(tiles[arrayCounter][1][1]);
+        sendLogMessage(tiles[arrayCounter][1][2]);
+        sendLogMessage(tiles[arrayCounter][1][3]);
+  
+        arrayCounter++;
+      }    
+    
+    }
 
     // reset the messageID
     if(autoBot == 1)
@@ -642,11 +665,41 @@ void loop()
     {
       messageID = 200;
     }
+ 
   }
+ 
+  
+}
 
-  if(waitForInfo)
-  {
-    receiveLogMessage();
+bool doAction(int actionMessage){
+
+  actionMessage = actionMessage - 20;
+
+  switch(actionMessage){
+    case 0:
+      // straight
+      changeCoordinates(0);
+      straight();
+      delay(140);
+      break;
+    case 1:
+      // turn right
+      changeAutobotOrientation(1);
+      changeCoordinates(1);
+      turn(1);
+      break;
+    case 2:
+      // turn around
+      changeAutobotOrientation(3);
+      changeCoordinates(3);
+      turn(1);
+      break;
+    case 3:
+      // turn left
+      changeAutobotOrientation(2);
+      changeCoordinates(2);
+      turn(0);     
+      break;
   }
   
 }
