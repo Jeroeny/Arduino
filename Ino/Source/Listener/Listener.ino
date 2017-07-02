@@ -11,7 +11,7 @@ RF24 bumblebeeRadio (9, 10);
 
 const uint64_t pipes[4] = { 0xF0F0F0F0E1LL, 0xF0F0F0F0D2LL, 0xF0F0F0F0A1LL, 0xF0F0F0F0A2LL };
 
-bool test1 = true;
+bool test1 = false;
 bool test2 = false;
 
 void setup()
@@ -19,12 +19,12 @@ void setup()
   Serial.begin(9600);
 
   optimusRadio.begin();
-  optimusRadio.openReadingPipe(1, pipes[2]);
+  optimusRadio.openReadingPipe(1, pipes[1]);
   optimusRadio.stopListening();
   optimusRadio.startListening();
 
   bumblebeeRadio.begin();
-  bumblebeeRadio.openReadingPipe(3, pipes[3]);
+  bumblebeeRadio.openReadingPipe(3, pipes[2]);
   bumblebeeRadio.stopListening();
   bumblebeeRadio.startListening();
 
@@ -195,15 +195,15 @@ void listenOptimus()
     bool ok = optimusRadio.read(&message, sizeof(unsigned long));
     Serial.println("Received from optimus:");
     Serial.println(message);
-    if (ok)
-    {
-      if (message != optimus)
-      {
+//    if (ok)
+//    {
+//      if (message != optimus)
+//      {
         optimusRadio.stopListening();
         optimus = message;
         optimusRadio.startListening();
-      }
-    }
+//      }
+//    }
   }
 }
 
@@ -252,8 +252,8 @@ void sendData(String message)
   switch(robot)
   {
     case '1':
-      Serial.println("Sending to optimus:");
-      Serial.println(msgi);
+      Serial.println("Sending to optimus:" + data);
+      //Serial.println(msgi);
       optimusRadio.stopListening();
       optimusRadio.openWritingPipe(pipes[0]);
       sent = optimusRadio.write(&msgi, sizeof(char));
@@ -265,8 +265,8 @@ void sendData(String message)
       }
       break;
     case '2':
-      Serial.println("Sending to bumblebee:");
-      Serial.println(msgi);
+      Serial.println("Sending to bumblebee:" + data);
+      //Serial.println(msgi);
       bumblebeeRadio.stopListening();
       bumblebeeRadio.openWritingPipe(pipes[1]);
       sent = bumblebeeRadio.write(&msgi, sizeof(char));

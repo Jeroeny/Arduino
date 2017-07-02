@@ -303,14 +303,13 @@ int receiveLogMessage()
     delay(10);
   }
   
-  // TODO test this shit
   bool ok = myRadio.read(&receivedMessage, sizeof(unsigned long));
-  digitalWrite(LED_BUILTIN, HIGH);
+  //digitalWrite(LED_BUILTIN, HIGH);
   
   Serial.println("Message Received: ");
   Serial.println(receivedMessage);
  
-  sendLogMessage(receivedMessage);
+  //sendLogMessage(receivedMessage);
   
   return receivedMessage;
 }
@@ -498,6 +497,10 @@ bool hasReceived = false;
 
 void loop() 
 {
+
+  //int msg1 = receiveLogMessage();  
+  //Serial.print(msg1);
+  
   // Read sensor data
   readAllSensors();
   // Start following the line
@@ -586,94 +589,98 @@ void loop()
     
     moving = true;
 
-    
-    // get Info
-    int msg = 99;
+    // determine the direction
+    if(messageID == 210 || messageID == 240 || messageID == 260 || messageID == 230)
+    {
+      messageID += 3;
+      sendLogMessage(messageID);
+      
+      // turn left
+      //changeAutobotOrientation(2);
+      //changeCoordinates(2);
+      //turn(0);
+    }
+    else if(messageID == 220 || (messageID == 200 && straightTile == true))
+    {
+      messageID += 0;
+      sendLogMessage(messageID);
+
+      // go straight
+      //changeCoordinates(0);
+      //straight();
+      //delay(140);
+    }
+    else if(messageID == 250)
+    {
+      messageID += 1;
+      sendLogMessage(messageID);
+      
+      // turn right
+      //changeAutobotOrientation(1);
+      //changeCoordinates(1);
+      //turn(1);
+    }
+    else if(messageID == 270)
+    {
+      messageID += 2;
+      sendLogMessage(messageID);
+      
+      // turn around
+      //changeAutobotOrientation(3);
+      //changeCoordinates(3);
+      //turn(1);
+    }
+
+    // save the intersection
+    if(arrayCounter <= 200)
+    {
+      tiles[arrayCounter][1][1] = x;
+      tiles[arrayCounter][1][2] = y;
+      tiles[arrayCounter][1][3] = tile;
+
+      //sendLogMessage(tiles[arrayCounter][1][1]);
+      //sendLogMessage(tiles[arrayCounter][1][2]);
+      //sendLogMessage(tiles[arrayCounter][1][3]);
+
+      arrayCounter++;
+    }
+
+
+    int msg = 9;
+    // If listener / application just gave a command, ignore for 4 seconds to complete that command
     if(!hasReceived || millis() - lastMessage > 4000){
       msg = receiveLogMessage();
+      msg = msg - 200;
       lastMessage = millis();
       hasReceived = true;
     }
-    if(msg != 99){
-      doAction(msg);  
+    // msg == 99 means robot must decide the next step
+    if(msg != 9){
+      doAction(msg);
     }else{
-    
-      // determine the direction
-      if(messageID == 210 || messageID == 240 || messageID == 260 || messageID == 230)
-      {
-        messageID += 3;
-        sendLogMessage(messageID);
-        
-        // turn left
-        changeAutobotOrientation(2);
-        changeCoordinates(2);
-        turn(0);
-      }
-      else if(messageID == 220 || (messageID == 200 && straightTile == true))
-      {
-        messageID += 0;
-        sendLogMessage(messageID);
-
-        // go straight
-        changeCoordinates(0);
-        straight();
-        delay(140);
-      }
-      else if(messageID == 250)
-      {
-        messageID += 1;
-        sendLogMessage(messageID);
-        
-        // turn right
-        changeAutobotOrientation(1);
-        changeCoordinates(1);
-        turn(1);
-      }
-      else if(messageID == 270)
-      {
-        messageID += 2;
-        sendLogMessage(messageID);
-        
-        // turn around
-        changeAutobotOrientation(3);
-        changeCoordinates(3);
-        turn(1);
-      }
-  
-      // save the intersection
-      if(arrayCounter <= 200)
-      {
-        tiles[arrayCounter][1][1] = x;
-        tiles[arrayCounter][1][2] = y;
-        tiles[arrayCounter][1][3] = tile;
-  
-        sendLogMessage(tiles[arrayCounter][1][1]);
-        sendLogMessage(tiles[arrayCounter][1][2]);
-        sendLogMessage(tiles[arrayCounter][1][3]);
-  
-        arrayCounter++;
-      }    
-    
+      // Use the direction the robot has chosen 
+      msg = messageID;
+      doAction(msg);
     }
-
-    // reset the messageID
-    if(autoBot == 1)
-    {
-      messageID = 100;
-    }
-    else if(autoBot == 2)
-    {
-      messageID = 200;
-    }
- 
+  
   }
- 
+
+  // reset the messageID
+  if(autoBot == 1)
+  {
+    messageID = 100;
+  }
+  else if(autoBot == 2)
+  {
+    messageID = 200;
+  }
   
 }
 
 bool doAction(int actionMessage){
 
-  actionMessage = actionMessage - 20;
+  // the last number of the actionMessage is the turn direction
+  actionMessage = actionMessage % 10;
 
   switch(actionMessage){
     case 0:

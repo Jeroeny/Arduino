@@ -6,6 +6,7 @@ using System.Management;
 using System.Windows.Forms;
 using MazeDrawer.HelperClasses;
 using System.Linq;
+using System.Threading;
 
 
 /*
@@ -50,17 +51,22 @@ namespace MazeDrawer
 
         private ArrayHelper optimusTile;
         private ArrayHelper bumbleBTile;
-        private bool isMerged; 
+        private bool isMerged;
+
+        private int lastMessage;
+
+        private bool messageConfirmed = true;
+
 
         public Form1()
         {
             InitializeComponent();
             graphic = CreateGraphics();
 
-            serialport = new SerialPort();
-            InitSerialport();
-            serialport.DataReceived += Serialport_DataReceived;
 
+            Thread initSerialPort = new Thread(() => InitSerialport());
+            initSerialPort.Start();
+            
             tiles = new ImageList();
             AddImagesToList();
 
@@ -82,6 +88,8 @@ namespace MazeDrawer
             centerY = 275;
 
             isMerged = false;
+
+            lastMessage = getTimestamp();
         }
 
         public static List<ArrayHelper> GetMazeList()
@@ -94,6 +102,7 @@ namespace MazeDrawer
         /// </summary>
         private void InitSerialport()
         {
+            serialport = new SerialPort();
             serialport.PortName = DetectArduinoPort();
             serialport.BaudRate = 9600;
             serialport.Parity = Parity.None;
@@ -109,6 +118,8 @@ namespace MazeDrawer
                 MessageBox.Show("Something went wrong... =(" + Environment.NewLine + "Close whatever is using " + serialport.PortName, "WHOOPS!");
                 System.Environment.Exit(1);
             }
+
+            serialport.DataReceived += Serialport_DataReceived;
         }
 
         /// <summary>
@@ -179,11 +190,9 @@ namespace MazeDrawer
         private void DataReceived(string data)
         {
             char robot = data[0];
-            Console.WriteLine("DataReceived: " + data);
-
-            Int32 unixTimestamp = (Int32)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
-
-            Console.WriteLine("At: " + unixTimestamp);
+            Console.WriteLine(getTimestamp() + " DataReceived: " + data);
+            messageConfirmed = true;
+            //Console.WriteLine("At: " + unixTimestamp);
             switch (robot)
             {
                 case '1':
@@ -193,6 +202,8 @@ namespace MazeDrawer
                     DoRobotyStuff(bumblebee, data);
                     break;
             }
+
+            
         }
 
         /// <summary>
@@ -520,6 +531,10 @@ namespace MazeDrawer
             if (!isMerged)
             {
                 CompareMaze(robot);
+                if (!isMerged)
+                {
+                    addMessageToSend("09", robot);
+                }
             }
         }
 
@@ -861,7 +876,17 @@ namespace MazeDrawer
                     newOrientation = Orientation.NORTH;
                 }
                 Console.WriteLine("NEW:  " + newOrientation);
+                int turnDirection = getTurnDirection(newOrientation, autobot);
+                Console.WriteLine("NEW:  " + turnDirection);
+                addMessageToSend("0" + turnDirection, autobot);
             }
+        }
+
+        private void addMessageToSend(string data, Autobot robot)
+        {
+            Thread t = new Thread(() => SendData(data, robot));
+            t.Start();
+
         }
 
         /// <summary>
@@ -869,19 +894,117 @@ namespace MazeDrawer
         /// </summary>
         private void SendData(string data, Autobot robot)
         {
+
+
             string message;
+            int prevTs = 0;
+            //getTimestamp() - lastMessage < 5
+            while (!messageConfirmed)
+            {
+                // wait
+                if (getTimestamp() != prevTs)
+                {
+                    Console.WriteLine(getTimestamp() + " Waiting..");
+                    prevTs = getTimestamp();
+                }
+            }
+
+            lastMessage = getTimestamp();
+            messageConfirmed = false;
 
             switch (robot.Name)
             {
                 case "Optimus":
                     message = "1" + data;
                     serialport.Write(message);
+                    Console.WriteLine(lastMessage + " DataSend: " + message);
                     break;
                 case "Bumblebee":
                     message = "2" + data;
                     serialport.Write(message);
+                    Console.WriteLine(lastMessage + " DataSend: " + message);
                     break;
             }
+        }
+
+        private int getTurnDirection(Orientation targetOrientation, Autobot robot)
+        {
+            int direction = 0;
+
+            switch (targetOrientation)
+            {
+                case Orientation.NORTH:
+                    switch (robot.Orientation)
+                    {
+                        case Orientation.NORTH:
+                            direction = 0;
+                            break;
+                        case Orientation.EAST:
+                            direction = 1;
+                            break;
+                        case Orientation.SOUTH:
+                            direction = 2;
+                            break;
+                        case Orientation.WEST:
+                            direction = 3;
+                            break;
+                    }
+                    break;
+                case Orientation.EAST:
+                    switch (robot.Orientation)
+                    {
+                        case Orientation.NORTH:
+                            direction = 3;
+                            break;
+                        case Orientation.EAST:
+                            direction = 0;
+                            break;
+                        case Orientation.SOUTH:
+                            direction = 1;
+                            break;
+                        case Orientation.WEST:
+                            direction = 2;
+                            break;
+                    }
+                    break;
+                case Orientation.SOUTH:
+                    switch (robot.Orientation)
+                    {
+                        case Orientation.NORTH:
+                            direction = 2;
+                            break;
+                        case Orientation.EAST:
+                            direction = 3;
+                            break;
+                        case Orientation.SOUTH:
+                            direction = 0;
+                            break;
+                        case Orientation.WEST:
+                            direction = 1;
+                            break;
+                    }
+                    break;
+                case Orientation.WEST:
+                    switch (robot.Orientation)
+                    {
+                        case Orientation.NORTH:
+                            direction = 1;
+                            break;
+                        case Orientation.EAST:
+                            direction = 2;
+                            break;
+                        case Orientation.SOUTH:
+                            direction = 3;
+                            break;
+                        case Orientation.WEST:
+                            direction = 0;
+                            break;
+                    }
+                    break;
+            }
+
+            return direction;
+
         }
 
         /// <summary>
@@ -909,12 +1032,16 @@ namespace MazeDrawer
         /// <param name="e"></param>
         private void button1_Click(object sender, EventArgs e)
         {
-            Console.WriteLine("Charge");
-            Int32 unixTimestamp = (Int32)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
+            //Console.WriteLine(getTimestamp() + " Charge");
 
-            Console.WriteLine("At: " + unixTimestamp);
-            SendData("3", bumblebee);
+            addMessageToSend("09", bumblebee);
+
             //SendData("35", optimus);
+        }
+
+        private int getTimestamp()
+        {
+            return (int)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
         }
     }
 }
